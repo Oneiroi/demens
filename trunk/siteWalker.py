@@ -6,7 +6,7 @@ from urlparse import urljoin, urlsplit
 
 '''
 Simple webspider/site crawler adapted designed to follow all a links and walk the site in it's entirety
-, idealy suited for cache prebuilding, this version hacked to provide AB stats
+, idealy suited for cache prebuilding
 __author__="David Busby"
 __copyright__="David Busby Saiweb.co.uk"
 __license__="GNU v3 + part 5d section 7: Redistribution/Reuse of this code is permitted under the GNU v3 license, as an additional term ALL code must carry the original Author(s) credit in comment form." 
@@ -14,6 +14,7 @@ __license__="GNU v3 + part 5d section 7: Redistribution/Reuse of this code is pe
 
 done=set()
 newpages=set()
+abLines=set()
 aThreads = 0
 class child(threading.Thread):
 	def __init__(self, threadID, page):
@@ -52,15 +53,8 @@ class child(threading.Thread):
 			bpl = 'homepage'
 		try:
 			c=urllib2.urlopen(self.page)
-			prg = os.system("ab -c 100 -n 100 -g '/root/benchwalk/%s.bpl' %s/ "%(bpl,self.page))
 		except:
 			return False
-		#prg = os.popen("ab -c 100 -n 10 -g ./%s.bpl %s/ "%(self.page,self.page),"r")
-		#i=0
-		#for line in prg.readlines():
-		#	i+=1
-			#this is realy just here to make the prog wait during benchmarking
-		#thread.exit()	
 
 def threadcheck():
 	t=0
@@ -79,7 +73,6 @@ def _toparse():
 	i = 0
 	for page in newpages:
 		i += 1
-	print i
 	if i > 0:
 		return True
 	else:
@@ -115,9 +108,6 @@ class crawler:
 			self.cThreads=[]
 
 if __name__ == '__main__':
-	if not os.path.isdir('/root/benchwalk'):
-		print '/root/benchwalk required, please mkdir /root/benchwalk and retry'
-		sys.exit(1)	
 	q = 'How many threads do you want?:'
 
 	try:
@@ -129,5 +119,4 @@ if __name__ == '__main__':
 	q = 'Please enter the URL to spider (http://yoursite.com):'
         url = raw_input(q)
         c = crawler()
-        c.crawl([url])	
-
+        c.crawl([url])
