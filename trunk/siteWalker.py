@@ -73,6 +73,7 @@ def threadcheck():
 		if t > 0:
 			return True
 		else:
+			opts.aThread=0
 			return False
 
 '''
