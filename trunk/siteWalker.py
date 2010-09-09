@@ -1,8 +1,9 @@
-
+#!/usr/bin/env python
 
 import time,os
 import urllib2,re,threading,thread,sys
 from urlparse import urljoin, urlsplit
+from signal import signal, SIGTERM, SIGINT, SIGHUP
 
 '''
 Simple webspider/site crawler adapted designed to follow all a links and walk the site in it's entirety
@@ -14,8 +15,14 @@ __license__="GNU v3 + part 5d section 7: Redistribution/Reuse of this code is pe
 
 done=set()
 newpages=set()
-abLines=set()
 aThreads = 0
+
+'''
+opts, stub class
+'''
+class opts:
+	slen = 0
+
 class child(threading.Thread):
 	def __init__(self, threadID, page):
 		self.threadID = threadID
@@ -46,16 +53,11 @@ class child(threading.Thread):
 	                      				newpages.add(url)
 		done.add(self.page)
         	newpages.discard(self.page)
-		print 'parsed',self.page,'got',p,'internal links'
-		d = urlsplit(self.page)
-		bpl = re.subn('/','-',d.path)[0]
-		if len(bpl) == 0:
-			bpl = 'homepage'
-		try:
-			c=urllib2.urlopen(self.page)
-		except:
-			return False
+		progress('to parse: %s, last activity: %s' % (len(newpages),'+%s'%p))
 
+'''
+Simple enough function returns true if threads are alive (still running) false on none alive
+'''
 def threadcheck():
 	t=0
     	for thread in crawler.cThreads:
@@ -67,6 +69,10 @@ def threadcheck():
 		else:
 			return False
 
+'''
+This function loops through the "done" set, removing them from newpages to prevent
+re-crawling, returns true if after this pages are left to crawl, false on none
+'''
 def _toparse():
 	for d in done:
         	newpages.discard(d)
@@ -78,10 +84,15 @@ def _toparse():
 	else:
 		return False
 	
- 
+'''
+crawler class
+'''
 class crawler:
 	cThreads=[]
-		
+	
+	'''
+	the crawler function
+	'''
 	def crawl(self,pages,mThread=1):
 		for page in pages:
 			newpages.add(page)
@@ -107,7 +118,22 @@ class crawler:
 				time.sleep(1)
 			self.cThreads=[]
 
+'''
+progress bar, nasty hack writes out string after flushing out with whitespace
+'''
+
+def progress(str):
+        str = " %s" % str
+        
+        while len(str) < opts.slen:
+            str = '%s ' % str    
+        opts.slen = len(str)
+        sys.stdout.write(str + '\r')
+        sys.stdout.flush()
+
+
 if __name__ == '__main__':
+
 	q = 'How many threads do you want?:'
 
 	try:
@@ -120,3 +146,4 @@ if __name__ == '__main__':
         url = raw_input(q)
         c = crawler()
         c.crawl([url])
+
