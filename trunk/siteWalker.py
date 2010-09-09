@@ -73,7 +73,7 @@ def threadcheck():
 		if t > 0:
 			return True
 		else:
-			opts.aThread=0
+			opts.aThreads=0
 			return False
 
 '''
@@ -117,8 +117,10 @@ class crawler:
 				threadcheck()
 				while opts.aThreads >= mThreads:
 					#print 'Reached max threads waiting on some to exit'
+					print opts.aThreads
 					time.sleep(1)
-					threadcheck()	
+					threadcheck()
+						
 			while threadcheck() == True:
 				#print 'Waiting for threads to complete'
 				time.sleep(1)
