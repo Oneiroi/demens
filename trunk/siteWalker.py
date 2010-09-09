@@ -15,13 +15,17 @@ __license__="GNU v3 + part 5d section 7: Redistribution/Reuse of this code is pe
 
 done=set()
 newpages=set()
-aThreads = 0
 
 '''
 opts, stub class
 '''
 class opts:
 	slen = 0
+	parsed = 0
+	lParsed = 0
+	lTime = 0
+	pStr = ''
+	aThreads = 0
 
 class child(threading.Thread):
 	def __init__(self, threadID, page):
@@ -53,7 +57,9 @@ class child(threading.Thread):
 	                      				newpages.add(url)
 		done.add(self.page)
         	newpages.discard(self.page)
-		progress('to parse: %s, last activity: %s' % (len(newpages),'+%s'%p))
+		opts.parsed += 1
+		progress(p)
+		sys.exit()
 
 '''
 Simple enough function returns true if threads are alive (still running) false on none alive
@@ -63,7 +69,7 @@ def threadcheck():
     	for thread in crawler.cThreads:
         	if thread.isAlive():
 			t+=1
-			aThreads=t
+			opts.aThreads=t
 		if t > 0:
 			return True
 		else:
@@ -108,21 +114,25 @@ class crawler:
 				self.cThreads.append(c)
 				c.start()
 				threadcheck()
-				while aThreads >= mThreads:
-					print 'Reached max threads waiting on some to exit'
+				while opts.aThreads >= mThreads:
+					#print 'Reached max threads waiting on some to exit'
 					time.sleep(1)
 					threadcheck()	
 			while threadcheck() == True:
-				print 'Waiting for threads to complete'
+				#print 'Waiting for threads to complete'
 				time.sleep(1)
 			self.cThreads=[]
 
 '''
-progress bar, nasty hack writes out string after flushing out with whitespace
+progress bar information
 '''
-
-def progress(str):
-        str = " %s" % str
+def progress(last):
+	ctime = time.time()
+	cparsed = opts.parsed
+	if (ctime - opts.lTime) >= 2:
+		opts.pStr = '[%s/s]'	% round((cparsed - opts.lParsed) / (ctime - opts.lTime),2)
+	threadcheck()        
+	str = " toParse: %s, lastAction: +%s, aThreads: %s %s" % (len(newpages),last,opts.aThreads,opts.pStr)
         
         while len(str) < opts.slen:
             str = '%s ' % str    
@@ -130,6 +140,8 @@ def progress(str):
         sys.stdout.write(str + '\r')
         sys.stdout.flush()
 
+	opts.lTime = ctime	
+	opts.lParsed = cparsed
 
 if __name__ == '__main__':
 
