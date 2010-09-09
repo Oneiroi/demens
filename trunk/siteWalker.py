@@ -94,25 +94,24 @@ class crawler:
 	the crawler function
 	'''
 	def crawl(self,pages,mThread=1):
+		tID = 0
 		for page in pages:
 			newpages.add(page)
 		while _toparse():
-			pages = newpages
-			for page in pages:
-				newpages.add(page)
-				p = 0
-			for page in newpages:
-				p += 1
-				c = child(p,page)
+			'''
+				need to set cPages due to RuntimeError: Set changed size during iteration when multi threading
+			'''
+			cPages = list(newpages)
+			for page in cPages:
+				tID += 1
+				c = child(tID,page)
 				self.cThreads.append(c)
 				c.start()
-				
 				threadcheck()
 				while aThreads >= mThreads:
 					print 'Reached max threads waiting on some to exit'
 					time.sleep(1)
 					threadcheck()	
-
 			while threadcheck() == True:
 				print 'Waiting for threads to complete'
 				time.sleep(1)
