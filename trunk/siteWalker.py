@@ -36,7 +36,7 @@ class child(threading.Thread):
 		try:
         		c=urllib2.urlopen(self.page)
 	    	except:
-        		print "Could not open %s" % self.page
+        		
         		sys.exit()	
     		dat = c.read()
      		#parse line by line
@@ -115,9 +115,9 @@ class crawler:
 				self.cThreads.append(c)
 				c.start()
 				threadcheck()
-				while opts.aThreads >= mThreads:
+				while threadcheck() or opts.aThreads >= mThreads:
 					#print 'Reached max threads waiting on some to exit'
-					print opts.aThreads
+					print opts.aThreads,mThreads
 					time.sleep(1)
 					threadcheck()
 						
