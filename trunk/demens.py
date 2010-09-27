@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import time,os,copy
+import time,os,copy,getopt
 import httplib,re,threading,thread,sys
 from urlparse import urljoin, urlsplit
 from signal import signal, SIGTERM, SIGINT, SIGHUP
@@ -12,7 +12,7 @@ and trying to get it working,
 
 This "app" is desgined to help with the following:
 
-Spidering an entire site checking varnish cache status, gzip / deflate compatibility, and remoprting dead links
+Spidering an entire site checking varnish cache status, gzip compatibility, and remoprting dead links
 
 __author__="David Busby"
 __copyright__="David Busby Saiweb.co.uk"
@@ -32,54 +32,112 @@ class opts:
 	cThreads = []
 	done=set()
 	newpages=set()
-	dead=set()
+	dead={}
+	ltParse=0
 
-def run(page):
+
+def run(page,ip):
 	u = urlsplit(page)	
-	c = httplib.HTTPConnection(u.netloc)
-	c.request('GET',u.path)
+	c = httplib.HTTPConnection(ip)
+	c.request('GET',u.path,{},{'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby'})
 	r = c.getresponse()
-	headers = {'User-Agent':'demens','accept-encoding':'gzip'}
+	headers = {'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
 	g = c.request('GET',u.path,{},headers)
-	dat = r.read()
-	
-       	for m in re.finditer('<a([^>]*)/?>',dat,re.DOTALL):
-		h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
-		p=0
-		if h != None:
-               		url = urljoin(page,h.group(1))
-        		if re.search(page,url) and url not in opts.done:
-        			p+=1
-	       			opts.newpages.add(url)
-		progress(p)
+	if r.status != 200:
+		opts.dead.update({'url':page,"code":r.status})
+
+	if not re.search('\.(css|js|jpe?g|png|gif)$',page):
+		dat = r .read()
+		'''anchor tags'''	
+       		for m in re.finditer('<a([^>]*)/?>',dat,re.DOTALL):
+			h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+			p=0
+			if h != None:
+       	        		url = urljoin(page,h.group(1))
+       	 			if re.search(page,url) and url not in opts.done:
+       	 				p+=1
+	       				opts.newpages.add(url)
+		'''link tags'''
+		for m in re.finditer('<link([^>]*)/?>',dat,re.DOTALL):
+       	        	h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+       	        	p=0
+                	if h != None:
+                       		url = urljoin(page,h.group(1))
+                        	if re.search(page,url) and url not in opts.done:
+                                	p+=1
+                                	opts.newpages.add(url)
+		'''script tags'''
+		for m in re.finditer('<script([^>]*)/?>',dat,re.DOTALL):
+                	h = re.match('.*src=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+                	p=0
+                	if h != None:
+                        	url = urljoin(page,h.group(1))
+                        	if re.search(page,url) and url not in opts.done:
+                               		p+=1
+                                	opts.newpages.add(url)
+		'''img tags'''
+                for m in re.finditer('<img([^>]*)/?>',dat,re.DOTALL):
+                        h = re.match('.*src=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+                        p=0
+                        if h != None:
+                                url = urljoin(page,h.group(1))
+                                if re.search(page,url) and url not in opts.done:
+                                        p+=1
+                                        opts.newpages.add(url)
+	opts.parsed+=1
 	opts.done.add(page)
         opts.newpages.discard(page)
-        
-		
 		
 '''
 progress bar information
 '''
-def progress(last):
+def progress():
 	ctime = time.time()
 	cparsed = opts.parsed
-	if (ctime - opts.lTime) >= 2:
-		opts.pStr = '[%s/s]'	% round((cparsed - opts.lParsed) / (ctime - opts.lTime),2)
-	str = " toParse: %s, lastAction: +%s %s" % (len(opts.newpages),last,opts.pStr)
+
+	str = " toParse: %s, parsed: %s, last change: %s" % (len(opts.newpages),opts.parsed,(len(opts.newpages)-opts.ltParse))
         
         while len(str) < opts.slen:
             str = '%s ' % str    
+
         opts.slen = len(str)
         sys.stdout.write(str + '\r')
         sys.stdout.flush()
 
 	opts.lTime = ctime	
 	opts.lParsed = cparsed
+	opts.ltParse = len(opts.newpages)
+
+def usage():
+	print sys.argv[0],'-u <url entry point> -i <ip of cache server>'
+	sys.exit(2)
 
 if __name__ == '__main__':
-	opts.newpages.add('http://www.worldtravelguide.net/')
+	try:
+       		gOpts, args = getopt.getopt(sys.argv[1:], "hu:i:", ["help", "url=","ip="])
+    	except getopt.GetoptError, err:
+        	print str(err)
+        	usage()
+        	sys.exit(2)	
+	u = None
+	i = None
+	for o,a in gOpts:
+		if o in ("-h","--help"):
+			usage()
+		elif o in ("-u","--url"):
+			u = a
+		elif o in ("-i","--ip"):
+			i = a
+		else:
+			assert False, "unhandled option"
+	if u == None or i == None:
+		usage()
+	opts.newpages.add(u)
 	while len(opts.newpages) > 0:
 		pages = copy.copy(opts.newpages)
 		for page in pages:
-			run(page)
-	
+			if time.time() - opts.lTime >=2:
+				progress()
+			run(page,i)
+	if len(opts.dead) > 0:
+		print opts.dead	
