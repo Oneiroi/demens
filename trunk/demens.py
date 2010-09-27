@@ -101,7 +101,9 @@ def progress():
 	ctime = time.time()
 	cparsed = opts.parsed
 
-	str = " toParse: %s, parsed: %s, last change: %s" % (len(opts.newpages),opts.parsed,(len(opts.newpages)-opts.ltParse))
+	if ctime - opts.lTime >=2:
+		pStr = '[%s/s]' % round(((1.00*opts.parsed-opts.lParsed)/(1.00*ctime-opts.lTime)),3)
+	str = " toParse: %s, parsed: %s, last change: %s %s" % (len(opts.newpages),opts.parsed,(len(opts.newpages)-opts.ltParse),pStr)
         
         while len(str) < opts.slen:
             str = '%s ' % str    
