@@ -42,13 +42,15 @@ def run(page,ip):
 	if opts.version >= 2.6:
 		headers={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby'}
 		gheaders={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
+		uri=u.path
 	else:
 		headers={'host':u[1],'User-Agent':'demens - cache populator by D.Busby'}
 		gheaders={'host':u[1],'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
+		uri=u[2]
 		
-	c.request('GET',u.path,{},headers)
+	c.request('GET',uri,{},headers)
 	r = c.getresponse()
-	g = c.request('GET',u.path,{},gheaders)
+	g = c.request('GET',uri,{},gheaders)
 	if r.status != 200:
 		opts.dead.update({'url':page,"code":r.status})
 
