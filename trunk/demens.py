@@ -10,9 +10,7 @@ demens : (dementis ) :  insane, mad, out of one's mind.
 The name has been chosen due to the insanity suffered in trying to code this in such a short amount of time.
 and trying to get it working,
 
-This "app" is desgined to help with the following:
-
-Spidering an entire site checking varnish cache status, gzip compatibility, and remoprting dead links
+This "app" is desgined to help with cache population of a site using an edge cache such as varnish, it will lookfor and request js,css,html,images
 
 __author__="David Busby"
 __copyright__="David Busby Saiweb.co.uk"
