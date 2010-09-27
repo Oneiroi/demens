@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import time,os,copy
-import urllib2,re,threading,thread,sys
+import httplib,re,threading,thread,sys
 from urlparse import urljoin, urlsplit
 from signal import signal, SIGTERM, SIGINT, SIGHUP
 
@@ -35,22 +35,25 @@ class opts:
 	dead=set()
 
 def run(page):
-	try:
-		c=urllib2.urlopen(page)
-	except urllib2.URLError, e:
-		print e
-		
-	dat = c.read()
-       	for m in re.finditer('.*<a([^>]*)/?>.*',dat,re.DOTALL):
+	u = urlsplit(page)	
+	c = httplib.HTTPConnection(u.netloc)
+	c.request('GET',u.path)
+	r = c.getresponse()
+	headers = {'User-Agent':'demens','accept-encoding':'gzip'}
+	g = c.request('GET',u.path,{},headers)
+	dat = r.read()
+	
+       	for m in re.finditer('<a([^>]*)/?>',dat,re.DOTALL):
 		h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
-        	if h != None:
+		p=0
+		if h != None:
                		url = urljoin(page,h.group(1))
-        	if re.search(page,url) and url not in opts.done:
-        		p+=1
-	       		opts.newpages.add(url)
+        		if re.search(page,url) and url not in opts.done:
+        			p+=1
+	       			opts.newpages.add(url)
+		progress(p)
 	opts.done.add(page)
         opts.newpages.discard(page)
-	 
         
 		
 		
@@ -62,8 +65,7 @@ def progress(last):
 	cparsed = opts.parsed
 	if (ctime - opts.lTime) >= 2:
 		opts.pStr = '[%s/s]'	% round((cparsed - opts.lParsed) / (ctime - opts.lTime),2)
-	threadcheck()        
-	str = " toParse: %s, lastAction: +%s, aThreads: %s %s" % (len(opts.newpages),last,opts.aThreads,opts.pStr)
+	str = " toParse: %s, lastAction: +%s %s" % (len(opts.newpages),last,opts.pStr)
         
         while len(str) < opts.slen:
             str = '%s ' % str    
@@ -75,7 +77,7 @@ def progress(last):
 	opts.lParsed = cparsed
 
 if __name__ == '__main__':
-	opts.newpages.add('http://www.saiweb.co.uk/')
+	opts.newpages.add('http://www.worldtravelguide.net/')
 	while len(opts.newpages) > 0:
 		pages = copy.copy(opts.newpages)
 		for page in pages:
