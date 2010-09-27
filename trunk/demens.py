@@ -34,15 +34,21 @@ class opts:
 	newpages=set()
 	dead={}
 	ltParse=0
-
+	version = 1.00*(sys.version_info[0]+(1.00*sys.version_info[1]/10))
 
 def run(page,ip):
 	u = urlsplit(page)	
 	c = httplib.HTTPConnection(ip)
-	c.request('GET',u.path,{},{'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby'})
+	if opts.version >= 2.6:
+		headers={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby'}
+		gheaders={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
+	else:
+		headers={'host':u[1],'User-Agent':'demens - cache populator by D.Busby'}
+		gheaders={'host':u[1],'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
+		
+	c.request('GET',u.path,{},headers)
 	r = c.getresponse()
-	headers = {'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
-	g = c.request('GET',u.path,{},headers)
+	g = c.request('GET',u.path,{},gheaders)
 	if r.status != 200:
 		opts.dead.update({'url':page,"code":r.status})
 
