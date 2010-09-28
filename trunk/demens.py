@@ -13,7 +13,7 @@ and trying to get it working,
 This "app" is desgined to help with cache population of a site using an edge cache such as varnish, it will lookfor and request js,css,html,images
 
 __author__="David Busby"
-__copyright__="David Busby Saiweb.co.uk"
+__copyright__="David Busby Saiweb.co.uk && Psycle Interactive Ltd"
 __license__="GNU v3 + part 5d section 7: Redistribution/Reuse of this code is permitted under the GNU v3 license, as an additional term ALL code must carry the original Author(s) credit in comment form." 
 '''
 
@@ -33,66 +33,75 @@ class opts:
 	dead={}
 	ltParse=0
 	version = 1.00*(sys.version_info[0]+(1.00*sys.version_info[1]/10))
+	aThreads = 0
+	threads = []
 
-def run(page,ip):
-	u = urlsplit(page)	
-	c = httplib.HTTPConnection(ip)
-	if opts.version >= 2.6:
-		headers={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby'}
-		gheaders={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
-		uri=u.path
-	else:
-		headers={'host':u[1],'User-Agent':'demens - cache populator by D.Busby'}
-		gheaders={'host':u[1],'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
-		uri=u[2]
+class child(threading.Thread):
+	def __init__(self,threadID,page):
+		self.threadID=threadID
+		self.page=page
+	def run(self,ip,port):
+		u = urlsplit(self.page)	
+		c = httplib.HTTPConnection(ip,port)
+		if opts.version >= 2.6:
+			headers={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby'}
+			gheaders={'host':u.netloc,'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
+			uri=u.path
+		else:
+			headers={'host':u[1],'User-Agent':'demens - cache populator by D.Busby'}
+			gheaders={'host':u[1],'User-Agent':'demens - cache populator by D.Busby','accept-encoding':'gzip'}
+			uri=u[2]
 		
-	c.request('GET',uri,{},headers)
-	r = c.getresponse()
-	g = c.request('GET',uri,{},gheaders)
-	if r.status != 200:
-		opts.dead.update({'url':page,"code":r.status})
+		c.request('GET',uri,{},headers)
+		r = c.getresponse()
+		g = c.request('GET',uri,{},gheaders)
+		if r.status != 200:
+			opts.dead.update({'url':page,"code":r.status})
 
-	if not re.search('\.(css|js|jpe?g|png|gif)$',page):
-		dat = r .read()
-		'''anchor tags'''	
-       		for m in re.finditer('<a([^>]*)/?>',dat,re.DOTALL):
-			h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
-			p=0
-			if h != None:
-       	        		url = urljoin(page,h.group(1))
-       	 			if re.search(page,url) and url not in opts.done:
-       	 				p+=1
-	       				opts.newpages.add(url)
-		'''link tags'''
-		for m in re.finditer('<link([^>]*)/?>',dat,re.DOTALL):
-       	        	h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
-       	        	p=0
-                	if h != None:
-                       		url = urljoin(page,h.group(1))
-                        	if re.search(page,url) and url not in opts.done:
-                                	p+=1
-                                	opts.newpages.add(url)
-		'''script tags'''
-		for m in re.finditer('<script([^>]*)/?>',dat,re.DOTALL):
-                	h = re.match('.*src=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
-                	p=0
-                	if h != None:
-                        	url = urljoin(page,h.group(1))
-                        	if re.search(page,url) and url not in opts.done:
-                               		p+=1
-                                	opts.newpages.add(url)
-		'''img tags'''
-                for m in re.finditer('<img([^>]*)/?>',dat,re.DOTALL):
-                        h = re.match('.*src=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
-                        p=0
-                        if h != None:
-                                url = urljoin(page,h.group(1))
-                                if re.search(page,url) and url not in opts.done:
-                                        p+=1
-                                        opts.newpages.add(url)
-	opts.parsed+=1
-	opts.done.add(page)
-        opts.newpages.discard(page)
+		if not re.search('\.(css|js|jpe?g|png|gif)$',self.page):
+			dat = r.read()
+			'''anchor tags'''	
+       			for m in re.finditer('<a([^>]*)/?>',dat,re.DOTALL):
+				h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+				p=0
+				if h != None:
+       	        			url = urljoin(self.page,h.group(1))
+       	 				if re.search(self.page,url) and url not in opts.done:
+       	 					p+=1
+	       					opts.newpages.add(url)
+			'''link tags'''
+			for m in re.finditer('<link([^>]*)/?>',dat,re.DOTALL):
+       	        		h = re.match('.*href=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+       	        		p=0
+				if h != None:
+                                        url = urljoin(self.page,h.group(1))
+                                        if re.search(self.page,url) and url not in opts.done:
+                                        	p+=1
+                                        	opts.newpages.add(url)
+
+			'''script tags'''
+			for m in re.finditer('<script([^>]*)/?>',dat,re.DOTALL):
+                		h = re.match('.*src=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+				p=0
+				if h != None:
+                                        url = urljoin(self.page,h.group(1))
+                                        if re.search(self.page,url) and url not in opts.done:
+                                        	p+=1
+                                        	opts.newpages.add(url)
+
+			'''img tags'''
+                	for m in re.finditer('<img([^>]*)/?>',dat,re.DOTALL):
+                       		h = re.match('.*src=[\'|"]([^\'|"]*)[\'|"].*',m.group(1))
+                        	p=0
+				if h != None:
+                                        url = urljoin(self.page,h.group(1))
+                                        if re.search(self.page,url) and url not in opts.done:
+                                        	p+=1
+                                        	opts.newpages.add(url)
+
+		opts.parsed+=1
+		opts.done.add(self.page)
+        	opts.newpages.discard(self.page)
 		
 '''
 progress bar information
@@ -117,18 +126,19 @@ def progress():
 	opts.ltParse = len(opts.newpages)
 
 def usage():
-	print sys.argv[0],'-u <url entry point> -i <ip of cache server>'
+	print sys.argv[0],'-u <url entry point> -i <ip of cache server> -p <port>'
 	sys.exit(2)
 
 if __name__ == '__main__':
 	try:
-       		gOpts, args = getopt.getopt(sys.argv[1:], "hu:i:", ["help", "url=","ip="])
+       		gOpts, args = getopt.getopt(sys.argv[1:], "hu:i:p:", ["help", "url=","ip=","port="])
     	except getopt.GetoptError, err:
         	print str(err)
         	usage()
         	sys.exit(2)	
 	u = None
 	i = None
+	port = 80
 	for o,a in gOpts:
 		if o in ("-h","--help"):
 			usage()
@@ -136,6 +146,8 @@ if __name__ == '__main__':
 			u = a
 		elif o in ("-i","--ip"):
 			i = a
+		elif o in ("-p","--port"):
+			port = a
 		else:
 			assert False, "unhandled option"
 	if u == None or i == None:
@@ -146,6 +158,8 @@ if __name__ == '__main__':
 		for page in pages:
 			if time.time() - opts.lTime >=2:
 				progress()
-			run(page,i)
+			c = child(1,page)
+			c.run(i,port)
 	if len(opts.dead) > 0:
+		print	
 		print opts.dead	
